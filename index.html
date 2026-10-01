@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TimeBoard</title>
+<style>
+:root{--bg:#f0f2f5;--card:#fff;--tx:#050505;--tx2:#65676b;--bl:#0866ff;--bl2:#e7f3ff;--br:#dadde1;--ok:#31a24c;--wa:#f7b928;--er:#fa383e}
+@media(prefers-color-scheme:dark){:root{--bg:#18191a;--card:#242526;--tx:#e4e6eb;--tx2:#b0b3b8;--bl2:#263951;--br:#3e4042}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--tx)}
+button,input,select{font:inherit}
+.top{position:sticky;top:0;z-index:5;height:56px;background:var(--card);box-shadow:0 1px 2px #0003;display:flex;align-items:center;gap:10px;padding:0 16px}
+.logo{width:40px;height:40px;border-radius:50%;background:var(--bl);color:#fff;display:grid;place-items:center;font-weight:700;font-size:22px}
+.wrap{display:flex}.side{width:270px;padding:12px 8px;position:sticky;top:56px;height:calc(100vh - 56px)}
+.main{flex:1;padding:20px;max-width:1100px;min-width:0}
+.nv{display:flex;gap:12px;align-items:center;padding:10px;border-radius:8px;cursor:pointer;font-weight:500;border:0;background:none;width:100%;color:var(--tx);text-align:left}
+.nv:hover{background:var(--bg)}.nv.on{background:var(--bl2);color:var(--bl)}
+.card{background:var(--card);border-radius:10px;box-shadow:0 1px 2px #0003;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}.grid .card{margin:0}
+.kpi b{display:block;font-size:24px}.kpi span{color:var(--tx2);font-size:13px}
+.btn{border:0;border-radius:6px;padding:9px 16px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--tx)}.btn.p{background:var(--bl);color:#fff}.btn.r{background:var(--er);color:#fff}.btn.g{background:var(--ok);color:#fff}
+input,select{padding:9px 12px;border:1px solid var(--br);border-radius:8px;background:var(--bg);color:var(--tx)}
+table{width:100%;border-collapse:collapse}th{text-align:left;color:var(--tx2);font-size:13px;font-weight:600}td,th{padding:8px 6px;border-bottom:1px solid var(--br)}.tbl{overflow-x:auto}
+.pill{border-radius:99px;padding:2px 10px;font-size:12px;font-weight:600;background:var(--bl2);color:var(--bl)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.bar{height:10px;border-radius:5px;background:var(--bl)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+h2{margin:0 0 12px;font-size:20px}.mut{color:var(--tx2)}
+.ban{background:var(--bl2);color:var(--bl);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-weight:600}
+@media(max-width:800px){.side{position:fixed;bottom:0;top:auto;width:100%;height:auto;display:flex;z-index:6;background:var(--card);padding:4px}.nv{flex-direction:column;gap:2px;font-size:11px;padding:6px}.main{padding:12px 12px 90px}.sn{display:none}}
+</style></head><body>
+<script>
+const $=s=>document.querySelector(s),K='tb1',ROLE={admin:'Admin',rh:'RH',manager:'Manager',collab:'Collaborateur'};
+const E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const H=async p=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('tb:'+p)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+const tm=s=>{const[a,b]=s.split(':');return +a*60+ +b},ymd=d=>d.toLocaleDateString('sv');
+const hr=e=>e.t=='Absence'||!e.e||!e.a?0:Math.max(0,(tm(e.e)-tm(e.a)-e.p)/60);
+const eur=n=>Math.round(n).toLocaleString('fr-FR')+' €',fh=h=>{const m=Math.round(h*60);return Math.floor(m/60)+'h'+String(m%60).padStart(2,'0')};
+const save=()=>localStorage.setItem(K,JSON.stringify(db)),U=id=>db.users.find(u=>u.id==id)||{n:id,c:0};
+const vis=()=>db.users.filter(x=>me.r=='admin'||me.r=='rh'||x.id==me.id||(me.r=='manager'&&x.m==me.id));
+let db,me,pg='day';
+function wdays(M){const[y,m]=M.split('-').map(Number);let n=0;for(let d=new Date(y,m-1,1);d.getMonth()==m-1;d.setDate(d.getDate()+1))if(![0,6].includes(d.getDay()))n++;return n}
+async function seed(){const a=await H('admin123'),d=await H('demo1234');let s=7;const rn=()=>(s=(s*16807)%2147483647)/2147483647,z=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+const mk=(id,n,r,team,c,m,pw)=>({id,n,r,team,c,m,pw,s:1});
+db={users:[mk('admin','Steve Admin','admin','Direction',0,'',a),mk('rh','Hanta Rakoto','rh','RH',0,'',d),mk('manager','Mialy Andria','manager','Setting',18,'',d),mk('jean','Jean Rabe','collab','Setting',12,'manager',d),mk('julie','Julie Rasoa','collab','Setting',13,'manager',d),mk('tiana','Tiana Randria','collab','Closing',15,'manager',d),mk('lova','Lova Rakoto','collab','Closing',14,'manager',d)],
+en:[],run:{},log:[],cfg:{dh:8,ot:1.25},pj:[{n:'ABC · Recrutement IT',r:35},{n:'XYZ · Staffing ingénieurs',r:42},{n:'Interne',r:0}]};
+for(let i=1;i<=45;i++){const dt=new Date();dt.setDate(dt.getDate()-i);if([0,6].includes(dt.getDay()))continue;
+db.users.filter(u=>u.m).forEach(u=>{const x=rn(),st=470+Math.floor(rn()*50),ab=x<.05,ed=st+480+Math.floor((rn()-.4)*90);
+db.en.push({u:u.id,d:ymd(dt),a:ab?'':z(st),e:ab?'':(x>.97?'':z(ed)),p:60,proj:db.pj[Math.floor(rn()*3)].n,t:ab?'Absence':rn()<.25?'Télétravail':'Présentiel',mo:ab&&rn()<.7?'Congé':'',st:i>7?'Validé':'Soumis'})})}}
+function an(e){const r=[],h=hr(e),dw=new Date(e.d+'T12:00').getDay();
+if(e.t=='Absence'){if(!e.mo)r.push('Absence non justifiée')}else{if(!e.e&&e.d<ymd(new Date()))r.push('Pas d’heure de départ');if(h>10)r.push('Plus de 10 h travaillées');if(h>6&&e.p<30)r.push('Pause trop courte');if(e.p>120)r.push('Pause trop longue');if(e.e&&Math.abs(h-db.cfg.dh)>2)r.push('Écart important');if([0,6].includes(dw))r.push('Jour normalement non travaillé')}
+if(db.en.filter(x=>x.u==e.u&&x.d==e.d).length>1)r.push('Double saisie');return r}
+const col=e=>an(e).length?'var(--er)':e.t!='Absence'&&e.e&&Math.abs(hr(e)-db.cfg.dh)>.5?'var(--wa)':'var(--ok)';
+function stats(M){const ids=new Set(vis().map(u=>u.id)),S={},P={},D={},T={h:0,ot:0,ab:0,c:0,bh:0,ca:0};
+db.en.filter(e=>e.d.startsWith(M)&&ids.has(e.u)).forEach(e=>{const u=U(e.u),h=hr(e),ot=Math.max(0,h-db.cfg.dh),c=h*u.c+ot*u.c*(db.cfg.ot-1),pj=db.pj.find(p=>p.n==e.proj),rt=pj?pj.r:0,s=S[e.u]=S[e.u]||{h:0,ot:0,c:0,ab:0};
+if(e.t=='Absence'){s.ab++;T.ab++;return}
+s.h+=h;s.ot+=ot;s.c+=c;T.h+=h;T.ot+=ot;T.c+=c;D[e.d]=(D[e.d]||0)+h;if(rt){T.bh+=h;T.ca+=h*rt}
+const p=P[e.proj]=P[e.proj]||{h:0,c:0,ca:0};p.h+=h;p.c+=c;p.ca+=h*rt});return{S,P,D,T}}
+const SC={Brouillon:'🟡',Soumis:'🔵',Validé:'🟢',Refusé:'🔴'};
+const row=(e,n)=>`<tr><td>${n?E(U(e.u).n)+'</td><td>':''}${e.d}</td><td>${e.a||'—'} → ${e.e||'—'}</td><td>${fh(hr(e))}</td><td>${e.t}${e.mo?' · '+E(e.mo):''}</td><td>${E(e.proj||'')}</td><td><span class=dot style="background:${col(e)}" title="${an(e).join(', ')}"></span>${SC[e.st]||''} ${e.st}</td></tr>`;
+const th=n=>`<tr>${n?'<th>Collaborateur</th>':''}<th>Date</th><th>Horaires</th><th>Durée</th><th>Type</th><th>Projet</th><th>Statut</th></tr>`;
+const NAV=[['day','🕒','Ma journée','cmra'],['dash','📊','Tableau de bord','mra'],['val','✅','Validation','ma'],['team','👥','Équipe','mra'],['ano','🚨','Anomalies','mra'],['cfg','⚙️','Paramètres','a']];
+function login(){document.body.innerHTML=`<div style="min-height:100vh;display:grid;place-items:center;padding:16px"><div style="max-width:400px;width:100%"><div class=logo style="width:56px;height:56px;margin-bottom:12px">T</div><h1 style="font-size:34px;margin:0 0 4px;color:var(--bl)">TimeBoard</h1><p class=mut style="margin:0 0 16px;font-size:18px">Suivez les heures, les coûts et la marge de vos équipes.</p><form class=card id=lf style="display:grid;gap:12px"><input id=li placeholder="Identifiant" autocomplete=username><input id=lp type=password placeholder="Mot de passe" autocomplete=current-password><div id=le style="color:var(--er);font-size:13px"></div><button class="btn p" style="padding:12px">Se connecter</button><small class=mut>Démo : admin / admin123 — manager, rh, jean, julie… / demo1234</small></form></div></div>`;
+$('#lf').onsubmit=async e=>{e.preventDefault();const u=db.users.find(x=>x.id==$('#li').value.trim().toLowerCase()&&x.s);if(u&&u.pw==await H($('#lp').value)){sessionStorage.tbu=u.id;me=u;pg='day';app()}else $('#le').textContent='Identifiant ou mot de passe incorrect.'}}
+function app(){clearInterval(window.tk);document.body.innerHTML=`<div class=top><div class=logo>T</div><b style="font-size:20px;color:var(--bl)">TimeBoard</b><span style="flex:1"></span><span class=sn>${E(me.n)} <span class=pill>${ROLE[me.r]}</span></span><button class=btn id=lo>Déconnexion</button></div><div class=wrap><nav class=side>${NAV.filter(n=>n[3].includes(me.r[0])).map(n=>`<button class="nv${n[0]==pg?' on':''}" data-p=${n[0]}><span>${n[1]}</span><span>${n[2]}</span></button>`).join('')}</nav><main class=main id=mn></main></div>`;
+document.querySelectorAll('.nv').forEach(b=>b.onclick=()=>{pg=b.dataset.p;app()});$('#lo').onclick=()=>{sessionStorage.clear();login()};PG[pg]()}
+const log=x=>{db.log.unshift({t:new Date().toLocaleString('fr-FR'),x});db.log=db.log.slice(0,30)};
+const PG={};
+PG.day=()=>{const r=db.run[me.id],n=new Date(),td=ymd(n),mine=db.en.filter(e=>e.u==me.id).sort((a,b)=>a.d<b.d?1:-1),mon=new Date(n);mon.setDate(n.getDate()-((n.getDay()+6)%7));
+const sum=f=>mine.filter(f).reduce((s,e)=>s+hr(e),0),M=td.slice(0,7),wk=sum(e=>e.d>=ymd(mon)),mo=sum(e=>e.d.startsWith(M)),dh=db.cfg.dh;
+const miss=![0,6].includes(n.getDay())&&!r&&!mine.some(e=>e.d==td),pend=mine.filter(e=>['Brouillon','Refusé'].includes(e.st)).length;
+$('#mn').innerHTML=`${miss?'<div class=ban>🔔 Vous n’avez pas encore renseigné vos heures aujourd’hui.</div>':''}${pend?`<div class=ban>📝 ${pend} saisie(s) à soumettre pour validation.</div>`:''}
+<div class=card style="text-align:center"><div class=mut>${n.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</div><div id=clk style="font-size:52px;font-weight:700">--:--</div>
+<div class=mut>${r?(r.ps?'⏸ En pause':'🟢 Journée en cours depuis '+r.a):'Prêt à démarrer'}</div><div id=wt style="margin:8px 0;font-weight:600"></div>
+${r?'':`<div class=row style="justify-content:center;margin:10px 0"><select id=ty><option>Présentiel<option>Télétravail</select><select id=pj>${db.pj.map(p=>`<option>${E(p.n)}`).join('')}</select></div>`}
+<div class=row style="justify-content:center">${!r?'<button class="btn g" data-a=s>▶ Démarrer ma journée</button>':r.ps?'<button class="btn p" data-a=r>▶ Reprendre</button>':'<button class=btn data-a=p>☕ Pause</button><button class="btn r" data-a=e>■ Terminer ma journée</button>'}</div></div>
+<div class=grid><div class="card kpi"><span>Cette semaine</span><b>${fh(wk)} / ${dh*5}h</b></div><div class="card kpi"><span>Ce mois</span><b>${fh(mo)} / ${wdays(M)*dh}h</b></div></div>
+<div class=card><h2>Saisie manuelle</h2><div class=row><input type=date id=md value=${td}><input type=time id=ma value=08:30><input type=time id=me value=17:30><input type=number id=mp value=60 min=0 style="width:90px" title="Pause (min)"><select id=mt><option>Présentiel<option>Télétravail<option>Absence</select><select id=mo><option value="">Motif d’absence<option>Congé<option>Maladie<option>Formation<option>Mission extérieure</select><select id=mj>${db.pj.map(p=>`<option>${E(p.n)}`).join('')}</select><button class="btn p" id=add>Ajouter</button></div></div>
+<div class=card><div class=row style="justify-content:space-between"><h2>Mes heures</h2><button class="btn p" id=sub>Soumettre ma semaine</button></div><div class=tbl><table>${th()}${mine.slice(0,25).map(e=>row(e)).join('')||'<tr><td>Aucune saisie</td></tr>'}</table></div></div>`;
+const tick=()=>{const c=$('#clk');if(!c)return;const t=new Date();c.textContent=t.toTimeString().slice(0,8);const r=db.run[me.id];if(r){const w=(Date.now()-r.t0)/6e4-r.pm-(r.ps?(Date.now()-r.ps)/6e4:0);$('#wt').textContent=`Temps travaillé : ${fh(w/60)} · Objectif ${dh}h · Écart ${Math.round(w-dh*60)} min`}};tick();window.tk=setInterval(tick,1000);
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a,now=Date.now(),t=new Date().toTimeString().slice(0,5);let r=db.run[me.id];
+if(a=='s')db.run[me.id]={a:t,t0:now,ps:null,pm:0,proj:$('#pj').value,ty:$('#ty').value};
+if(a=='p')r.ps=now;if(a=='r'){r.pm+=Math.round((now-r.ps)/6e4);r.ps=null}
+if(a=='e'){if(r.ps)r.pm+=Math.round((now-r.ps)/6e4);db.en.push({u:me.id,d:td,a:r.a,e:t,p:r.pm,proj:r.proj,t:r.ty,mo:'',st:'Brouillon'});delete db.run[me.id]}save();app()});
+$('#add').onclick=()=>{const t=$('#mt').value;db.en.push({u:me.id,d:$('#md').value,a:t=='Absence'?'':$('#ma').value,e:t=='Absence'?'':$('#me').value,p:+$('#mp').value||0,proj:$('#mj').value,t,mo:$('#mo').value,st:'Brouillon'});log(me.n+' a ajouté une saisie le '+$('#md').value);save();app()};
+$('#sub').onclick=()=>{mine.forEach(e=>{if(['Brouillon','Refusé'].includes(e.st))e.st='Soumis'});log(me.n+' a soumis ses heures');save();app()}};
+PG.dash=()=>{let M=window.M0;if(!M){const c={};db.en.forEach(e=>c[e.d.slice(0,7)]=(c[e.d.slice(0,7)]||0)+1);M=Object.keys(c).filter(k=>c[k]>=20).sort().pop()||ymd(new Date()).slice(0,7)}
+const{S,P,D,T}=stats(M),us=vis().filter(u=>u.s&&u.m||u.r=='collab'),td=ymd(new Date()),te=db.en.filter(e=>e.d==td&&us.some(u=>u.id==e.u)),mx=Math.max(1,...Object.values(S).map(s=>s.h)),dm=Math.max(1,...Object.values(D));
+const k=(l,v)=>`<div class="card kpi"><span>${l}</span><b>${v}</b></div>`;
+$('#mn').innerHTML=`<div class=row style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Tableau de bord</h2><div class=row><input type=month id=mm value=${M}><button class=btn id=ex>📥 Exporter le mois</button></div></div>
+<div class=grid>${k('Aujourd’hui · présents',te.filter(e=>e.t!='Absence').length+' / '+us.length)}${k('Aujourd’hui · absents',te.filter(e=>e.t=='Absence').length)}${k('Heures travaillées',fh(T.h))}${k('Heures supp.',fh(T.ot))}${k('Jours d’absence',T.ab)}${k('Coût du personnel',eur(T.c))}${k('Coût moyen / collab.',eur(T.c/Math.max(1,us.length)))}${k('Heures facturables',fh(T.bh))}${k('Taux de facturation',T.h?(T.bh/T.h*100).toFixed(1)+' %':'—')}${k('Chiffre d’affaires',eur(T.ca))}${k('Marge brute',eur(T.ca-T.c))}</div>
+<div class=card><h2>Heures par collaborateur</h2>${Object.entries(S).map(([id,s])=>`<div class=row style="margin:6px 0"><span style="width:130px">${E(U(id).n)}</span><div style="flex:1;min-width:120px"><div class=bar style="width:${s.h/mx*100}%"></div></div><b style="width:60px">${fh(s.h)}</b><span class=mut style="width:90px">${eur(s.c)}</span></div>`).join('')||'<span class=mut>Aucune donnée</span>'}</div>
+<div class=card><h2>Heures par jour</h2><div style="display:flex;align-items:flex-end;gap:3px;height:120px">${Object.keys(D).sort().map(d=>`<div title="${d} · ${fh(D[d])}" style="flex:1;background:var(--bl);border-radius:3px 3px 0 0;height:${D[d]/dm*100}%"></div>`).join('')}</div></div>
+<div class="card tbl"><h2>Rentabilité par projet</h2><table><tr><th>Projet</th><th>Heures</th><th>Coût</th><th>CA</th><th>Marge</th><th>Taux</th></tr>${Object.entries(P).map(([n,p])=>`<tr><td>${E(n)}</td><td>${fh(p.h)}</td><td>${eur(p.c)}</td><td>${eur(p.ca)}</td><td>${eur(p.ca-p.c)}</td><td>${p.ca?((p.ca-p.c)/p.ca*100).toFixed(0)+' %':'—'}</td></tr>`).join('')}</table></div>`;
+$('#mm').onchange=e=>{window.M0=e.target.value;app()};
+$('#ex').onclick=()=>{const ids=new Set(vis().map(u=>u.id)),L=[['Collaborateur','Date','Arrivée','Départ','Pause','Heures','Type','Projet','Coût','Statut']];
+db.en.filter(e=>e.d.startsWith(M)&&ids.has(e.u)).forEach(e=>L.push([U(e.u).n,e.d,e.a,e.e,e.p,hr(e).toFixed(2),e.t,e.proj,(hr(e)*U(e.u).c).toFixed(2),e.st]));
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(';')).join('\n')],{type:'text/csv'}));a.download='heures-'+M+'.csv';a.click()}};
+PG.val=()=>{const ids=new Set(vis().map(u=>u.id)),L=db.en.map((e,i)=>[e,i]).filter(([e])=>e.st=='Soumis'&&ids.has(e.u)&&e.u!=me.id).sort((a,b)=>a[0].d<b[0].d?1:-1).slice(0,40);
+$('#mn').innerHTML=`<div class=card class=tbl><h2>Heures à valider (${L.length})</h2><div class=tbl><table><tr><th>Collaborateur</th><th>Date</th><th>Horaires</th><th>Durée</th><th>Type</th><th>Projet</th><th>Statut</th><th></th></tr>${L.map(([e,i])=>row(e,1).replace(/<\/tr>$/,`<td class=row><button class="btn g" data-v=${i}>Valider</button><button class="btn r" data-x=${i}>Refuser</button></td></tr>`)).join('')||'<tr><td>Rien à valider 🎉</td></tr>'}</table></div></div>
+<div class=card><h2>Historique des modifications</h2>${db.log.map(l=>`<div class=mut>${l.t} — ${E(l.x)}</div>`).join('')||'<span class=mut>Aucune activité</span>'}</div>`;
+document.querySelectorAll('[data-v],[data-x]').forEach(b=>b.onclick=()=>{const i=b.dataset.v??b.dataset.x,e=db.en[i],ok=b.dataset.v!=null;e.st=ok?'Validé':'Refusé';log(`${me.n} a ${ok?'validé':'refusé'} ${U(e.u).n} (${e.d})`);save();app()})};
+PG.team=()=>{const ed='ra'.includes(me.r[0]);$('#mn').innerHTML=`<div class="card tbl"><h2>Collaborateurs</h2><table><tr><th>Nom</th><th>Identifiant</th><th>Rôle</th><th>Équipe</th><th>Coût horaire chargé</th><th>Statut</th>${ed?'<th></th>':''}</tr>${vis().map(u=>`<tr><td>${E(u.n)}</td><td>${E(u.id)}</td><td>${ROLE[u.r]}</td><td>${E(u.team)}</td><td>${u.c} €</td><td>${u.s?'🟢 Actif':'⚪ Sorti'}</td>${ed?`<td><button class=btn data-t=${u.id}>${u.s?'Désactiver':'Réactiver'}</button></td>`:''}</tr>`).join('')}</table></div>
+${ed?`<div class=card><h2>Ajouter un collaborateur</h2><div class=row><input id=nn placeholder="Nom prénom"><input id=ni placeholder="Identifiant"><input id=np type=password placeholder="Mot de passe"><select id=nr><option value=collab>Collaborateur<option value=manager>Manager<option value=rh>RH</select><input id=nt placeholder="Équipe"><input id=nc type=number placeholder="Coût/h €" style="width:110px"><select id=nm><option value="">Manager…${db.users.filter(u=>u.r=='manager').map(u=>`<option value=${u.id}>${E(u.n)}`).join('')}</select><button class="btn p" id=nb>Ajouter</button></div></div>`:''}`;
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const u=U(b.dataset.t);u.s=u.s?0:1;save();app()});
+if(ed)$('#nb').onclick=async()=>{const id=$('#ni').value.trim().toLowerCase();if(!id||!$('#nn').value||!$('#np').value||db.users.some(u=>u.id==id))return alert('Nom, identifiant unique et mot de passe requis.');
+db.users.push({id,n:$('#nn').value,r:$('#nr').value,team:$('#nt').value,c:+$('#nc').value||0,m:$('#nm').value,pw:await H($('#np').value),s:1});log(me.n+' a créé '+$('#nn').value);save();app()}};
+PG.ano=()=>{const ids=new Set(vis().map(u=>u.id)),L=db.en.filter(e=>ids.has(e.u)&&an(e).length).sort((a,b)=>a.d<b.d?1:-1).slice(0,50);
+$('#mn').innerHTML=`<div class="card tbl"><h2>Anomalies détectées (${L.length})</h2><table><tr><th>Collaborateur</th><th>Date</th><th>Problème</th></tr>${L.map(e=>`<tr><td>${E(U(e.u).n)}</td><td>${e.d}</td><td><span class=dot style="background:var(--er)"></span>${an(e).join(' · ')}</td></tr>`).join('')||'<tr><td colspan=3>Aucune anomalie 🟢</td></tr>'}</table></div>`};
+PG.cfg=()=>{$('#mn').innerHTML=`<div class=card><h2>Paramètres</h2><div class=row><label>Heures / jour <input id=cd type=number step=.5 value=${db.cfg.dh} style="width:80px"></label><label>Majoration heures supp. (×) <input id=co type=number step=.05 value=${db.cfg.ot} style="width:80px"></label></div><h2 style="margin-top:16px">Projets et tarifs client (€/h)</h2>${db.pj.map((p,i)=>`<div class=row style="margin:6px 0"><span style="width:220px">${E(p.n)}</span><input type=number data-r=${i} value=${p.r} style="width:90px"></div>`).join('')}<div class=row style="margin-top:12px"><button class="btn p" id=sv>Enregistrer</button><button class="btn r" id=rs>Réinitialiser les données de démo</button></div></div>`;
+$('#sv').onclick=()=>{db.cfg.dh=+$('#cd').value||8;db.cfg.ot=+$('#co').value||1;document.querySelectorAll('[data-r]').forEach(i=>db.pj[i.dataset.r].r=+i.value||0);save();alert('Enregistré')};
+$('#rs').onclick=()=>{if(confirm('Effacer toutes les données ?')){localStorage.removeItem(K);sessionStorage.clear();location.reload()}}};
+(async()=>{db=JSON.parse(localStorage.getItem(K)||'null');if(!db){await seed();save()}const s=sessionStorage.tbu;me=s&&db.users.find(u=>u.id==s);me?app():login()})();
+</script></body></html>
