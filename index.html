@@ -25,6 +25,7 @@ h2{margin:0 0 12px;font-size:20px}.mut{color:var(--tx2)}
 </style></head><body>
 <script>
 const $=s=>document.querySelector(s),K='tb1',ROLE={admin:'Admin',rh:'RH',manager:'Manager',collab:'Collaborateur'};
+const LS={p(){try{return JSON.parse(window.name)||{}}catch(e){return{}}},g(k){try{const v=localStorage.getItem(k);if(v!=null)return v}catch(e){}const v=this.p()[k];return v==null?null:v},s(k,v){try{localStorage.setItem(k,v)}catch(e){}const o=this.p();o[k]=v;try{window.name=JSON.stringify(o)}catch(e){}},r(k){try{localStorage.removeItem(k)}catch(e){}const o=this.p();delete o[k];try{window.name=JSON.stringify(o)}catch(e){}}};
 const E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const H=async p=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('tb:'+p)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 const tm=s=>{const[a,b]=s.split(':');return +a*60+ +b},ymd=d=>d.toLocaleDateString('sv');
